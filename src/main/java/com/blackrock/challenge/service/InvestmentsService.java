@@ -1,4 +1,6 @@
 package com.blackrock.challenge.service;
+
+import com.blackrock.challenge.dto.KPeriod;
 import com.blackrock.challenge.dto.request.InvestmentRequest;
 import com.blackrock.challenge.dto.response.InvestmentsResponse;
 import com.blackrock.challenge.dto.response.SavingsByDate;
@@ -7,7 +9,9 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
 
 import static com.blackrock.challenge.constants.FinancialConstants.*;
 
@@ -31,9 +35,12 @@ public class InvestmentsService {
             boolean npsMode
     ) {
 
-
-
-        var result = service.process();
+        var result = service.process(
+                request.transactions(),
+                request.q(),
+                request.p(),
+                request.k()
+        );
 
         BigDecimal totalAmount = result.totalTransactionAmount();
         BigDecimal totalCeiling = result.totalCeiling();
@@ -41,17 +48,46 @@ public class InvestmentsService {
         int years = 60 - request.age();
         if (years < 0) years = 5;
 
-        List<SavingsByDate> savings = result.kSummaries().stream()
-                .map(k -> computeReturns(
-                        k.start(),
-                        k.end(),
-                        k.amount(),
-                        rate,
-                        request.inflation(),
-                        years,
-                        npsMode,
-                        request.wage()
-                ))
+        BigDecimal annualIncome =
+                request.wage().multiply(new BigDecimal("12"));
+
+        int finalYears = years;
+        List<SavingsByDate> savings = result.kTotals()
+                .entrySet()
+                .stream()
+                .map(entry -> {
+
+                    BigDecimal invested = entry.getValue();
+
+                    BigDecimal profit = computeReturns(
+                            invested,
+                            rate,
+                            request.inflation(),
+                            finalYears
+                    );
+
+                    BigDecimal taxBenefit = BigDecimal.ZERO;
+
+                    if (npsMode) {
+
+                        BigDecimal deduction = invested
+                                .min(annualIncome.multiply(new BigDecimal("0.10")))
+                                .min(new BigDecimal("200000"));
+
+                        taxBenefit = calculateTaxBenefit(
+                                annualIncome,
+                                deduction
+                        );
+                    }
+
+                    return new SavingsByDate(
+                            entry.getKey().start(),
+                            entry.getKey().end(),
+                            invested.setScale(2, RoundingMode.HALF_UP),
+                            profit.setScale(2, RoundingMode.HALF_UP),
+                            taxBenefit.setScale(2, RoundingMode.HALF_UP)
+                    );
+                })
                 .toList();
 
         return new InvestmentsResponse(
@@ -61,69 +97,25 @@ public class InvestmentsService {
         );
     }
 
-    private SavingsByDate computeReturns(
-            String start,
-            String end,
+    private BigDecimal computeReturns(
             BigDecimal principal,
             BigDecimal rate,
             BigDecimal inflation,
-            int years,
-            boolean npsMode,
-            BigDecimal wage
+            int years
     ) {
 
-        if (principal.compareTo(BigDecimal.ZERO) == 0) {
-            return new SavingsByDate(
-                    start, end,
-                    BigDecimal.ZERO,
-                    BigDecimal.ZERO,
-                    BigDecimal.ZERO
-            );
-        }
+        if (principal.compareTo(BigDecimal.ZERO) == 0)
+            return BigDecimal.ZERO;
 
         MathContext mc = MathContext.DECIMAL64;
 
-        BigDecimal growthFactor =
-                BigDecimal.ONE.add(rate).pow(years, mc);
+        BigDecimal futureValue = principal.multiply(BigDecimal.ONE.add(rate).pow(years, mc), mc);
 
-        BigDecimal futureValue =
-                principal.multiply(growthFactor, mc);
+        BigDecimal inflationFactor = BigDecimal.ONE.add(inflation.divide(HUNDRED, mc)).pow(years, mc);
 
-        BigDecimal inflationFactor =
-                BigDecimal.ONE.add(inflation.divide(HUNDRED, mc))
-                        .pow(years, mc);
+        BigDecimal realValue = futureValue.divide(inflationFactor, mc);
 
-        BigDecimal realValue =
-                futureValue.divide(inflationFactor, mc);
-
-        BigDecimal profit =
-                realValue.subtract(principal, mc);
-
-        BigDecimal taxBenefit = BigDecimal.ZERO;
-
-        if (npsMode) {
-            BigDecimal annualIncome =
-                    wage.multiply(new BigDecimal("12"));
-
-            BigDecimal tenPercent =
-                    annualIncome.multiply(new BigDecimal("0.10"));
-
-            BigDecimal maxDeduction =
-                    new BigDecimal("200000");
-
-            BigDecimal deduction =
-                    principal.min(tenPercent).min(maxDeduction);
-
-            taxBenefit = calculateTaxBenefit(annualIncome, deduction);
-        }
-
-        return new SavingsByDate(
-                start,
-                end,
-                principal,
-                profit,
-                taxBenefit
-        );
+        return realValue.subtract(principal);
     }
 
     private BigDecimal calculateTaxBenefit(
@@ -137,41 +129,25 @@ public class InvestmentsService {
 
     private BigDecimal calculateTax(BigDecimal income) {
 
-        BigDecimal tax = BigDecimal.ZERO;
-
-        if (income.compareTo(new BigDecimal("700000")) <= 0) {
+        if (income.compareTo(SEVEN_LAKH) <= 0)
             return BigDecimal.ZERO;
-        }
 
-        if (income.compareTo(new BigDecimal("1000000")) <= 0) {
-            return income.subtract(new BigDecimal("700000"))
-                    .multiply(new BigDecimal("0.10"));
-        }
+        if (income.compareTo(TEN_LAKH) <= 0)
+            return income.subtract(SEVEN_LAKH)
+                    .multiply(TEN_PERCENT);
 
-        if (income.compareTo(new BigDecimal("1200000")) <= 0) {
-            tax = new BigDecimal("30000");
-            tax = tax.add(
-                    income.subtract(new BigDecimal("1000000"))
-                            .multiply(new BigDecimal("0.15"))
+        if (income.compareTo(TWELVE_LAKH) <= 0)
+            return new BigDecimal("30000").add(
+                    income.subtract(TEN_LAKH)
+                            .multiply(FIFTEEN_PERCENT)
             );
-            return tax;
-        }
 
-        if (income.compareTo(new BigDecimal("1500000")) <= 0) {
-            tax = new BigDecimal("60000");
-            tax = tax.add(
-                    income.subtract(new BigDecimal("1200000"))
-                            .multiply(new BigDecimal("0.20"))
+        if (income.compareTo(FIFTEEN_LAKH) <= 0)
+            return new BigDecimal("60000").add(
+                    income.subtract(TWELVE_LAKH)
+                            .multiply(TWENTY_PERCENT)
             );
-            return tax;
-        }
 
-        tax = new BigDecimal("120000");
-        tax = tax.add(
-                income.subtract(new BigDecimal("1500000"))
-                        .multiply(new BigDecimal("0.30"))
-        );
-
-        return tax;
+        return new BigDecimal("120000").add(income.subtract(FIFTEEN_LAKH).multiply(THIRTY_PERCENT));
     }
 }
