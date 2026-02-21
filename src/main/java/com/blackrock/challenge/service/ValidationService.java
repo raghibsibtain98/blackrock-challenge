@@ -34,7 +34,7 @@ public class ValidationService {
         Set<String> seen = new HashSet<>();
         BigDecimal runningTotalRemnant = BigDecimal.ZERO;
 
-        for (ParsedTransaction tx : request.parsedTransactions()) {
+        for (ParsedTransaction tx : request.transactions()) {
 
             /*Rule 2: Negative amount*/
             if (tx.amount() == null || tx.amount().compareTo(BigDecimal.ZERO) < 0) {

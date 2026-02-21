@@ -47,7 +47,7 @@ public class QPeriodRuleStrategy implements PeriodRuleStrategy<QPeriod> {
             }
 
             if (!active.isEmpty()) {
-                result.add(tx.withRemnant(active.peek().fixedRemnant()));
+                result.add(tx.withRemnant(active.peek().fixed()));
             } else {
                 result.add(tx);
             }

@@ -5,7 +5,6 @@ import com.blackrock.challenge.dto.PPeriod;
 import com.blackrock.challenge.dto.QPeriod;
 import com.blackrock.challenge.dto.request.ParsedTransaction;
 import com.blackrock.challenge.dto.request.Transaction;
-import com.blackrock.challenge.dto.response.InvalidTransaction;
 import com.blackrock.challenge.dto.response.InvalidTransactionFilter;
 import com.blackrock.challenge.dto.response.ProcessedTransaction;
 import com.blackrock.challenge.rule.aggregator.KPeriodAggregator;
@@ -96,7 +95,7 @@ public class TemporalRuleService {
                         .map(qReq -> new QPeriod(
                                 qReq.start(),
                                 qReq.end(),
-                                qReq.fixedRemnant()
+                                qReq.fixed()
                         ))
                         .toList();
 
@@ -117,8 +116,8 @@ public class TemporalRuleService {
                         ))
                         .toList();
 
-        List<ParsedTransaction> afterQ = qStrategy.apply(validDomainParsedTransactions, q);
-        List<ParsedTransaction> afterP = pStrategy.apply(afterQ, p);
+        List<ParsedTransaction> afterQ = qStrategy.apply(validDomainParsedTransactions, qPeriods);
+        List<ParsedTransaction> afterP = pStrategy.apply(afterQ, pPeriods);
 
         BigDecimal totalTransactionAmount = BigDecimal.ZERO;
         BigDecimal totalCeiling = BigDecimal.ZERO;

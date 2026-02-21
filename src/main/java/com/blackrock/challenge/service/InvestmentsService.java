@@ -1,6 +1,6 @@
 package com.blackrock.challenge.service;
 
-import com.blackrock.challenge.dto.KPeriod;
+
 import com.blackrock.challenge.dto.request.InvestmentRequest;
 import com.blackrock.challenge.dto.response.InvestmentsResponse;
 import com.blackrock.challenge.dto.response.SavingsByDate;
@@ -11,7 +11,6 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.List;
-import java.util.Map;
 
 import static com.blackrock.challenge.constants.FinancialConstants.*;
 
@@ -54,7 +53,7 @@ public class InvestmentsService {
         int finalYears = years;
         List<SavingsByDate> savings = result.kTotals()
                 .entrySet()
-                .stream()
+                .parallelStream()
                 .map(entry -> {
 
                     BigDecimal invested = entry.getValue();

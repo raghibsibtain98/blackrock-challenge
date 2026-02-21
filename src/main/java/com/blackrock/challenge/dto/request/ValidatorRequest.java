@@ -5,5 +5,5 @@ import java.util.List;
 
 public record ValidatorRequest(
         BigDecimal wage,
-        List<ParsedTransaction> parsedTransactions
+        List<ParsedTransaction> transactions
 ) {}

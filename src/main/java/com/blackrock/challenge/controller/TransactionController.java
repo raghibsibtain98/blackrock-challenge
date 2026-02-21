@@ -1,4 +1,4 @@
-package com.blackrock.challenge.controllers;
+package com.blackrock.challenge.controller;
 
 import com.blackrock.challenge.dto.request.*;
 import com.blackrock.challenge.dto.response.*;
@@ -29,7 +29,7 @@ public class TransactionController {
     }
 
 
-    @PostMapping("/parsedTransactions:validator")
+    @PostMapping("/transactions:validator")
     public ResponseEntity<ValidatorResponse> validate(
             @RequestBody ValidatorRequest request) {
 
