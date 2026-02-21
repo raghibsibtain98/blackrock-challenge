@@ -1,24 +1,15 @@
 package com.blackrock.challenge.service;
-import com.blackrock.challenge.dto.KPeriod;
-import com.blackrock.challenge.dto.PPeriod;
-import com.blackrock.challenge.dto.QPeriod;
 import com.blackrock.challenge.dto.request.InvestmentRequest;
-import com.blackrock.challenge.dto.request.ParsedTransaction;
-import com.blackrock.challenge.dto.response.InvalidTransactionFilter;
 import com.blackrock.challenge.dto.response.InvestmentsResponse;
-import com.blackrock.challenge.dto.response.ProcessedTransaction;
 import com.blackrock.challenge.dto.response.SavingsByDate;
-import com.blackrock.challenge.utils.CommonUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
-import java.util.ArrayList;
 import java.util.List;
 
-import static com.blackrock.challenge.constants.FinancialConstants.INDEX_RATE;
-import static com.blackrock.challenge.constants.FinancialConstants.NPS_RATE;
+import static com.blackrock.challenge.constants.FinancialConstants.*;
 
 @Service
 @RequiredArgsConstructor
@@ -63,14 +54,14 @@ public class InvestmentsService {
                 ))
                 .toList();
 
-        return new ReturnsResponseDto(
+        return new InvestmentsResponse(
                 totalAmount,
                 totalCeiling,
                 savings
         );
     }
 
-    private SavingsByDateDto computeReturns(
+    private SavingsByDate computeReturns(
             String start,
             String end,
             BigDecimal principal,
@@ -82,7 +73,7 @@ public class InvestmentsService {
     ) {
 
         if (principal.compareTo(BigDecimal.ZERO) == 0) {
-            return new SavingsByDateDto(
+            return new SavingsByDate(
                     start, end,
                     BigDecimal.ZERO,
                     BigDecimal.ZERO,
@@ -126,7 +117,7 @@ public class InvestmentsService {
             taxBenefit = calculateTaxBenefit(annualIncome, deduction);
         }
 
-        return new SavingsByDateDto(
+        return new SavingsByDate(
                 start,
                 end,
                 principal,

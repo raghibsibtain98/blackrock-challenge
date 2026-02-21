@@ -100,12 +100,14 @@ public class CommonUtils {
                         .toList();
     }
 
-    public static void getResponseFromRequest(List<InvalidTransactionFilter> invalid, List<PPeriod> pPeriods, List<QPeriod> qPeriods, List<KPeriod> kPeriods, List<ParsedTransaction> validDomainParsedTransactions, FilterRequest request){
+    public static void getResponseFromRequest(List<InvalidTransactionFilter> invalid, List<PPeriod> pPeriods, List<QPeriod> qPeriods, List<KPeriod> kPeriods,
+                                              List<ParsedTransaction> validDomainParsedTransactions,
+                                              FilterRequest request, List<Transaction> transactions){
 
         Set<String> seen = new HashSet<>();
 
         // Step 1: Validate + parse raw parsedTransactions
-        for (Transaction txn : request.transactions()) {
+        for (Transaction txn : transactions) {
 
             // Negative check
             if (txn.amount() == null ||

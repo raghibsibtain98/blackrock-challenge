@@ -1,26 +1,15 @@
 package com.blackrock.challenge.controllers;
 
-import com.blackrock.challenge.dto.KPeriod;
-import com.blackrock.challenge.dto.PPeriod;
-import com.blackrock.challenge.dto.QPeriod;
 import com.blackrock.challenge.dto.request.*;
 import com.blackrock.challenge.dto.response.*;
 import com.blackrock.challenge.service.InvestmentsService;
 import com.blackrock.challenge.service.TemporalRuleService;
 import com.blackrock.challenge.service.ParsingService;
 import com.blackrock.challenge.service.ValidationService;
-import com.blackrock.challenge.utils.CommonUtils;
-import com.blackrock.challenge.utils.DateUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.*;
-
-import static com.blackrock.challenge.constants.FinancialConstants.HUNDRED;
-import static com.blackrock.challenge.constants.FinancialConstants.ZERO;
 
 @RestController
 @RequiredArgsConstructor
@@ -49,32 +38,15 @@ public class TransactionController {
 
     @PostMapping("/transactions:filter")
     public ResponseEntity<FilterResponse> filter(@RequestBody FilterRequest request) {
-        List<InvalidTransactionFilter> invalid = new ArrayList<>();
-        List<ProcessedTransaction> valid;
-        List<ParsedTransaction> validDomainParsedTransactions = new ArrayList<>();
-        List<PPeriod> pPeriods = new ArrayList<>();
-        List<QPeriod> qPeriods = new ArrayList<>();
-        List<KPeriod> kPeriods = new ArrayList<>();
-        CommonUtils.getResponseFromRequest(invalid,pPeriods,qPeriods,kPeriods,validDomainParsedTransactions,request);
-
+        List<ProcessedTransaction> validTxns = new ArrayList<>();
         TemporalRuleService.EngineResult result =
                 engine.process(
-                        validDomainParsedTransactions,
-                        qPeriods,
-                        pPeriods,
-                        kPeriods
+                        request.transactions(),
+                        request.q(),
+                        request.p(),
+                        request.k()
                 );
-        valid = result.transactions().stream()
-                        .map(tx -> new ProcessedTransaction(
-                                tx.date(),
-                                tx.amount(),
-                                tx.ceiling(),
-                                tx.remnant(),
-                                tx.inkPeriod()
-                        ))
-                        .toList();
-
-        return ResponseEntity.ok(new FilterResponse(valid, invalid));
+        return ResponseEntity.ok(new FilterResponse(result.transactions(), result.invalidTransactions()));
     }
 
 
